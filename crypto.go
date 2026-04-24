@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -18,12 +19,17 @@ type Key struct {
 	data [KeySize]byte
 }
 
+func (k *Key) String() string {
+	return hex.EncodeToString(k.data[:])
+}
+
 var (
 	ErrInvalidKeyLength   = errors.New("crypto: invalid key length for parsing")
 	ErrCiphertextTooShort = errors.New("crypto: ciphertext is too short")
 	ErrDecryptFailed      = errors.New("crypto: decrypt failed (possible corrupted data, wrong key, or mismatched ID)")
 	ErrEntropySource      = errors.New("crypto: failed to read random bytes")
 	ErrKeyDerivation      = errors.New("crypto: key derivation failed")
+	ErrInvalidHexFormat   = errors.New("crypto: key is not a valid hex string")
 )
 
 func GenerateKey() (*Key, error) {
@@ -34,7 +40,15 @@ func GenerateKey() (*Key, error) {
 	return &key, nil
 }
 
-func ParseKey(b []byte) (*Key, error) {
+func ParseHexString(hexStr string) (*Key, error) {
+	decoded, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidHexFormat, err)
+	}
+	return parseKey(decoded)
+}
+
+func parseKey(b []byte) (*Key, error) {
 	if len(b) != KeySize {
 		return nil, ErrInvalidKeyLength
 	}
